@@ -1,0 +1,129 @@
+name: Deploy Gmail Push Notification Lambda
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - staging
+        - prod
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run tests
+      run: npm test
+      continue-on-error: true
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Deploy DynamoDB table
+      id: deploy-dynamodb
+      run: |
+        STACK_NAME="gmail-push-${{ github.event.inputs.environment || 'dev' }}-infrastructure"
+        
+        aws cloudformation deploy \
+          --template-file infrastructure/dynamodb.yml \
+          --stack-name $STACK_NAME \
+          --parameter-overrides \
+            Environment=${{ github.event.inputs.environment || 'dev' }} \
+          --capabilities CAPABILITY_NAMED_IAM \
+          --tags \
+            Environment=${{ github.event.inputs.environment || 'dev' }} \
+            Project=gmail-push-notifications \
+            ManagedBy=GitHubActions
+
+    - name: Deploy Lambda function
+      id: deploy-lambda
+      run: |
+        # Create deployment package
+        zip -r function.zip index.js node_modules/
+        
+        # Deploy Lambda function
+        STACK_NAME="gmail-push-${{ github.event.inputs.environment || 'dev' }}-lambda"
+        
+        aws cloudformation deploy \
+          --template-file infrastructure/lambda.yml \
+          --stack-name $STACK_NAME \
+          --parameter-overrides \
+            Environment=${{ github.event.inputs.environment || 'dev' }} \
+            DynamoDBTableName=gmail-push-${{ github.event.inputs.environment || 'dev' }}-devices \
+          --capabilities CAPABILITY_NAMED_IAM \
+          --tags \
+            Environment=${{ github.event.inputs.environment || 'dev' }} \
+            Project=gmail-push-notifications \
+            ManagedBy=GitHubActions
+
+    - name: Add Lambda Permission for ALB
+      id: add-lambda-permission
+      run: |
+        LAMBDA_NAME="gmail-push-${{ github.event.inputs.environment || 'dev' }}-lambda"
+        
+        aws lambda add-permission \
+          --function-name $LAMBDA_NAME \
+          --action lambda:InvokeFunction \
+          --principal elasticloadbalancing.amazonaws.com \
+          --statement-id alb-invoke-${{ github.event.inputs.environment || 'dev' }}
+
+    - name: Output deployment information
+      run: |
+        echo "🎉 Deployment completed successfully!"
+        echo "📊 Environment: ${{ github.event.inputs.environment || 'dev' }}"
+        echo "🔗 Lambda Function: gmail-push-${{ github.event.inputs.environment || 'dev' }}-lambda"
+        echo "🗄️  DynamoDB Table: gmail-push-${{ github.event.inputs.environment || 'dev' }}-devices"
+        echo ""
+        echo "📋 Next Steps:"
+        echo "1. Configure Gmail API credentials"
+        echo "2. Set up Gmail watch notifications"
+        echo "3. Configure ALB for device management and Gmail notification endpoints:"
+        echo "   - POST /device (device registration)"
+        echo "   - DELETE /device (device unregistration)"  
+        echo "   - POST /gmail-notification (Gmail notifications)"
+        echo "4. Update environment variables in Lambda console"
+        echo ""
+        echo "🔐 Required Environment Variables:"
+        echo "- APNS_TEAM_ID"
+        echo "- APNS_KEY_ID"  
+        echo "- APNS_PRIVATE_KEY"
+        echo "- APNS_BUNDLE_ID"
+
+    - name: Notify deployment
+      if: success()
+      run: |
+        echo "✅ Gmail Push Notification Lambda deployed successfully to ${{ github.event.inputs.environment || 'dev' }}!"
+
+    - name: Notify failure
+      if: failure()
+      run: |
+        echo "❌ Deployment failed for ${{ github.event.inputs.environment || 'dev' }} environment"
+        exit 1

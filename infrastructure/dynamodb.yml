@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: DynamoDB table for Gmail Push Notification Lambda
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Deployment environment
+
+Resources:
+  DeviceTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub gmail-push-${Environment}-devices
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: email
+          AttributeType: S
+        - AttributeName: deviceToken
+          AttributeType: S
+      KeySchema:
+        - AttributeName: email
+          KeyType: HASH
+        - AttributeName: deviceToken
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: false
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: gmail-push-notifications
+        - Key: ManagedBy
+          Value: GitHubActions
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+Outputs:
+  DeviceTableName:
+    Description: DynamoDB table name
+    Value: !Ref DeviceTable
+    Export:
+      Name: !Sub ${AWS::StackName}-DeviceTableName
+  
+  DeviceTableArn:
+    Description: DynamoDB table ARN
+    Value: !GetAtt DeviceTable.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-DeviceTableArn
