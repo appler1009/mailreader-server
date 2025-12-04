@@ -120,6 +120,9 @@ Resources:
       FunctionName: !Ref LambdaFunction
       Action: lambda:InvokeFunctionUrl
       Principal: "*"
+      Condition:
+        StringEquals:
+          lambda:FunctionUrlAuthType: NONE
 
   LogGroup:
     Type: AWS::Logs::LogGroup
