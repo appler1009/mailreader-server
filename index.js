@@ -15,6 +15,23 @@ const {
   APNS_BUNDLE_ID
 } = process.env;
 
+/**
+ * APNs Token-based Authentication Setup
+ * 
+ * This application uses modern token-based authentication for APNs (Apple Push Notification service)
+ * instead of certificates. This approach uses JWT tokens and has several advantages:
+ * 
+ * - No expiration (certificates expire annually, tokens don't)
+ * - Easier management (single P8 key for all apps)
+ * - More secure and modern approach
+ * 
+ * Required Environment Variables:
+ * - APNS_TEAM_ID: Your Apple Developer Team ID (10 characters)
+ * - APNS_KEY_ID: Your APNs Key ID (10 characters) 
+ * - APNS_PRIVATE_KEY: Your P8 private key file content
+ * - APNS_BUNDLE_ID: Your app's bundle identifier
+ */
+
 // APNS Server endpoints
 const APNS_PRODUCTION = 'api.push.apple.com';
 const APNS_SANDBOX = 'api.sandbox.apple.com';

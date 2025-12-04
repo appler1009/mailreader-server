@@ -68,11 +68,29 @@ Resources:
           NODE_OPTIONS: --enable-source-maps
           DYNAMODB_TABLE_NAME: !Ref DynamoDBTableName
           ENVIRONMENT: !Ref Environment
-          # These will need to be set manually in Lambda console or via SSM/Secrets Manager
+          # APNs Token-based Authentication (JWT tokens - modern approach)
+          # These will need to be set manually in Lambda console after deployment:
+          # APNS_TEAM_ID: Your Apple Developer Team ID (10 characters)
+          # APNS_KEY_ID: Your APNs Key ID (10 characters) 
+          # APNS_PRIVATE_KEY: Your P8 private key file content
+          # APNS_BUNDLE_ID: Your app's bundle identifier
           APNS_TEAM_ID: ""
           APNS_KEY_ID: ""
           APNS_PRIVATE_KEY: ""
           APNS_BUNDLE_ID: ""
+      FunctionUrlConfig:
+        Cors:
+          AllowMethods:
+            - GET
+            - POST
+            - DELETE
+            - OPTIONS
+          AllowHeaders:
+            - Content-Type
+          AllowOrigins:
+            - '*'
+          MaxAge: 86400
+        AuthType: NONE
       Code:
         ZipFile: |
           // Placeholder - actual code will be uploaded via deployment package
@@ -101,6 +119,14 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*
 
+  LambdaFunctionUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      Action: lambda:InvokeFunctionUrl
+      Principal: "*"
+      SourceArn: "*"
+
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -125,3 +151,9 @@ Outputs:
     Value: !GetAtt LambdaExecutionRole.Arn
     Export:
       Name: !Sub ${AWS::StackName}-LambdaExecutionRoleArn
+  
+  LambdaFunctionUrl:
+    Description: Lambda Function URL for HTTPS access
+    Value: !GetAtt LambdaFunction.FunctionUrl
+    Export:
+      Name: !Sub ${AWS::StackName}-LambdaFunctionUrl
