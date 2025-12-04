@@ -80,15 +80,17 @@ Resources:
           APNS_BUNDLE_ID: ""
       FunctionUrlConfig:
         Cors:
+          AllowCredentials: false
+          AllowHeaders:
+            - Content-Type
           AllowMethods:
             - GET
             - POST
             - DELETE
             - OPTIONS
-          AllowHeaders:
-            - Content-Type
           AllowOrigins:
             - '*'
+          ExposeHeaders: []
           MaxAge: 86400
         AuthType: NONE
       Code:
