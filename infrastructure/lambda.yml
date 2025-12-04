@@ -97,15 +97,6 @@ Resources:
           Value: gmail-push-notifications
         - Key: ManagedBy
           Value: GitHubActions
-
-  LambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref LambdaFunction
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*
-
   LambdaFunctionUrl:
     Type: AWS::Lambda::Url
     Properties:

@@ -1,4 +1,4 @@
-To prepare AWS for your Lambda function, ALB (Application Load Balancer), and DynamoDB to work with GitHub Actions deployment, you'll need the following prerequisites and configurations. This is based on your project's infrastructure templates and deployment workflow.
+To prepare AWS for your Lambda function and DynamoDB to work with GitHub Actions deployment, you'll need the following prerequisites and configurations. This is based on your project's infrastructure templates and deployment workflow.
 
 ## 1. AWS Account & Basic Setup
 
