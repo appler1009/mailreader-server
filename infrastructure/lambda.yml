@@ -78,21 +78,6 @@ Resources:
           APNS_KEY_ID: ""
           APNS_PRIVATE_KEY: ""
           APNS_BUNDLE_ID: ""
-      FunctionUrlConfig:
-        Cors:
-          AllowCredentials: false
-          AllowHeaders:
-            - Content-Type
-          AllowMethods:
-            - GET
-            - POST
-            - DELETE
-            - OPTIONS
-          AllowOrigins:
-            - '*'
-          ExposeHeaders: []
-          MaxAge: 86400
-        AuthType: NONE
       Code:
         ZipFile: |
           // Placeholder - actual code will be uploaded via deployment package
@@ -120,6 +105,25 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*
+
+  LambdaFunctionUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !GetAtt LambdaFunction.Arn
+      AuthType: NONE
+      Cors:
+        AllowCredentials: false
+        AllowHeaders:
+          - Content-Type
+        AllowMethods:
+          - GET
+          - POST
+          - DELETE
+          - OPTIONS
+        AllowOrigins:
+          - '*'
+        ExposeHeaders: []
+        MaxAge: 86400
 
   LambdaFunctionUrlPermission:
     Type: AWS::Lambda::Permission
@@ -156,6 +160,6 @@ Outputs:
   
   LambdaFunctionUrl:
     Description: Lambda Function URL for HTTPS access
-    Value: !GetAtt LambdaFunction.FunctionUrl
+    Value: !GetAtt LambdaFunctionUrl.FunctionUrl
     Export:
       Name: !Sub ${AWS::StackName}-LambdaFunctionUrl

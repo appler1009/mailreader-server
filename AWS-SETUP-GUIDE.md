@@ -6,7 +6,7 @@ To prepare AWS for your Lambda function, ALB (Application Load Balancer), and Dy
 **Performed by**: You manually
 
 - **AWS Account**: Active account with billing enabled
-- **AWS Region**: Choose a region (e.g., us-east-1) and ensure all resources will be created there
+- **AWS Region**: Choose a region (e.g., us-west-2) and ensure all resources will be created there
 - **AWS CLI**: Install and configure locally with `aws configure` for testing
 
 ## 2. IAM User for GitHub Actions
@@ -69,90 +69,32 @@ Add these secrets in your GitHub repo (Settings → Secrets and variables → Ac
 | `AWS_SECRET_ACCESS_KEY` | Secret key from the IAM user |
 | `AWS_REGION` | Your chosen AWS region |
 
-## 4. HTTPS Setup for Lambda Function URLs
+## 4. Lambda Function URL Configuration
 
-**Timing**: Already completed  
-**Status**: CloudFormation template has been updated with Lambda Function URL configuration
+**Timing**: Automated during deployment
+**Status**: Lambda Function URL is created automatically via CloudFormation
 
-**You're absolutely correct!** Gmail pub/sub requires HTTPS endpoints. However, you don't need to buy your own domain name. Here's the recommended solution:
+The CloudFormation template now includes a separate `AWS::Lambda::Url` resource that creates a public HTTPS endpoint for your Lambda function with the following configuration:
 
-### Lambda Function URLs (Recommended)
-**Easiest solution - AWS provides HTTPS automatically**
+- **Authentication**: None (public access)
+- **CORS**: Enabled for all origins with GET, POST, DELETE, OPTIONS methods
+- **Headers**: Content-Type allowed
+- **Max Age**: 86400 seconds
 
-The CloudFormation template in `infrastructure/lambda.yml` has already been updated with the following configuration:
+After deployment, your Lambda function will have an HTTPS URL like:
+`https://{your-function-id}.lambda-url.us-west-2.on.aws`
 
-```yaml
-LambdaFunction:
-  Type: AWS::Lambda::Function
-  Properties:
-    # ... existing properties ...
-    FunctionUrlConfig:
-      Cors:
-        AllowMethods:
-          - GET
-          - POST
-          - DELETE
-          - OPTIONS
-        AllowHeaders:
-          - Content-Type
-        AllowOrigins:
-          - '*'
-        MaxAge: 86400
-      AuthType: NONE  # No authentication required
-```
-
-**What's Already Configured:**
-- **FunctionUrlConfig**: Added to LambdaFunction with CORS settings
-- **LambdaFunctionUrlPermission**: Added for public function URL access
-- **LambdaFunctionUrl Output**: Exported for easy reference
-
-After deployment, you'll get an HTTPS URL like:
-`https://{your-function-id}.lambda-url.{region}.on.aws`
-
-### Configuration Details
-
-The CloudFormation template includes:
-
-1. **Lambda Function URL with CORS**:
-```yaml
-FunctionUrlConfig:
-  Cors:
-    AllowMethods: [GET, POST, DELETE, OPTIONS]
-    AllowHeaders: [Content-Type]
-    AllowOrigins: ['*']
-    MaxAge: 86400
-  AuthType: NONE
-```
-
-2. **Lambda Permission for URL Access**:
-```yaml
-LambdaFunctionUrlPermission:
-  Type: AWS::Lambda::Permission
-  Properties:
-    FunctionName: !Ref LambdaFunction
-    Action: lambda:InvokeFunctionUrl
-    Principal: "*"
-    SourceArn: "*"
-```
-
-3. **URL Export**:
-```yaml
-Outputs:
-  LambdaFunctionUrl:
-    Description: Lambda Function URL for HTTPS access
-    Value: !GetAtt LambdaFunction.FunctionUrl
-    Export:
-      Name: !Sub ${AWS::StackName}-LambdaFunctionUrl
-```
+The Function URL is created automatically as part of the CloudFormation stack deployment.
 
 ## 5. GitHub Actions Deployment
 
-**Timing**: Done DURING deployment  
+**Timing**: Done DURING deployment
 **Performed by**: GitHub Actions automatically
 
 When you push to your main branch, GitHub Actions will automatically:
 - Deploy DynamoDB table via CloudFormation
-- Deploy Lambda function with Function URLs via CloudFormation
+- Deploy Lambda function via CloudFormation
+- Create Lambda Function URL with HTTPS endpoint
 - Create all necessary IAM roles and permissions
 - Set up log groups and monitoring
 
@@ -161,15 +103,17 @@ When you push to your main branch, GitHub Actions will automatically:
 **Timing**: Done AFTER deployment  
 **Performed by**: You manually
 
-Once the deployment completes, manually configure:
+Once the deployment completes, verify the setup:
 
-### Get Lambda Function URL
+### Verify Lambda Function URL
+The Lambda Function URL is created automatically during deployment. You can verify it using:
+
 ```bash
-# Get your Lambda Function URL (created automatically by CloudFormation)
+# Verify your Lambda Function URL
 aws lambda get-function-url-config --function-name gmail-push-dev-lambda
 ```
 
-The URL will look like: `https://abcdef1234567890.lambda-url.us-east-1.on.aws`
+The URL will look like: `https://abcdef1234567890.lambda-url.us-west-2.on.aws`
 
 ### Lambda Environment Variables
 **Performed by**: You manually in Lambda console
@@ -301,7 +245,7 @@ aws sts get-caller-identity
 aws cloudformation describe-stacks --stack-name gmail-push-dev-infrastructure
 aws cloudformation describe-stacks --stack-name gmail-push-dev-lambda
 
-# Get Lambda Function URL
+# Verify Lambda Function URL
 aws lambda get-function-url-config --function-name gmail-push-dev-lambda
 
 # Test the endpoints
@@ -309,4 +253,4 @@ curl https://{your-function-url}/device
 curl https://{your-function-url}/gmail-notification
 ```
 
-The DynamoDB table and Lambda function with HTTPS URL will be created automatically by your GitHub Actions workflow.
+The DynamoDB table, Lambda function, and Lambda Function URL will be created automatically by your GitHub Actions workflow.
