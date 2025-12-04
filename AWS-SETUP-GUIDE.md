@@ -245,8 +245,15 @@ aws sts get-caller-identity
 aws cloudformation describe-stacks --stack-name gmail-push-dev-infrastructure
 aws cloudformation describe-stacks --stack-name gmail-push-dev-lambda
 
+# For production environment:
+aws cloudformation describe-stacks --stack-name gmail-push-prod-infrastructure
+aws cloudformation describe-stacks --stack-name gmail-push-prod-lambda
+
 # Verify Lambda Function URL
 aws lambda get-function-url-config --function-name gmail-push-dev-lambda
+
+# For production environment:
+aws lambda get-function-url-config --function-name gmail-push-prod-lambda
 
 # Test the endpoints
 curl https://{your-function-url}/device
