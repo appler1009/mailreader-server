@@ -34,6 +34,9 @@
       "text",
       "lcov",
       "html"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
     ]
   },
   "keywords": [
