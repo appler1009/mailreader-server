@@ -10,11 +10,31 @@
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.126",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20.8.0",
+    "jest": "^30.2.0",
     "typescript": "^5.2.2"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "index.js",
+      "!node_modules/**"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ]
   },
   "keywords": [
     "aws",
