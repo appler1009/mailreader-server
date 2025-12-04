@@ -119,10 +119,8 @@ Resources:
           - GET
           - POST
           - DELETE
-          - OPTIONS
         AllowOrigins:
           - '*'
-        ExposeHeaders: []
         MaxAge: 86400
 
   LambdaFunctionUrlPermission:
@@ -131,7 +129,6 @@ Resources:
       FunctionName: !Ref LambdaFunction
       Action: lambda:InvokeFunctionUrl
       Principal: "*"
-      SourceArn: "*"
 
   LogGroup:
     Type: AWS::Logs::LogGroup
