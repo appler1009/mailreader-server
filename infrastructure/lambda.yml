@@ -114,16 +114,6 @@ Resources:
           - '*'
         MaxAge: 86400
 
-  LambdaFunctionUrlPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref LambdaFunction
-      Action: lambda:InvokeFunctionUrl
-      Principal: "*"
-      Condition:
-        StringEquals:
-          lambda:FunctionUrlAuthType: NONE
-
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
