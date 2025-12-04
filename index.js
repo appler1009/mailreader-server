@@ -311,10 +311,13 @@ async function handleGmailNotification(event) {
       };
     }
 
+    // Determine if this is production environment
+    const isProduction = process.env.ENVIRONMENT === 'prod';
+
     // Send notification to all devices
     const results = await Promise.allSettled(
-      devices.map(device => 
-        sendAPNSNotification(device.deviceToken, notification)
+      devices.map(device =>
+        sendAPNSNotification(device.deviceToken, notification, isProduction)
       )
     );
 
