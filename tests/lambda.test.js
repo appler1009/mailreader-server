@@ -25,7 +25,12 @@ const mockDynamoDB = {
 jest.mock('aws-sdk', () => ({
   DynamoDB: {
     DocumentClient: jest.fn(() => mockDynamoDB)
-  }
+  },
+  SecretsManager: jest.fn(() => ({
+    getSecretValue: jest.fn().mockImplementation((params) => ({
+      promise: jest.fn().mockResolvedValue({ SecretString: 'mock-secret' })
+    }))
+  }))
 }));
 
 // Mock other dependencies
