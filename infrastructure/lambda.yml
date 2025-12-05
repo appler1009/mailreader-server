@@ -71,7 +71,7 @@ Resources:
       Handler: index.handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 30
-      MemorySize: 512
+      MemorySize: 256
       Environment:
         Variables:
           NODE_OPTIONS: --enable-source-maps
