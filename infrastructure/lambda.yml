@@ -77,16 +77,8 @@ Resources:
           NODE_OPTIONS: --enable-source-maps
           DYNAMODB_TABLE_NAME: !Ref DynamoDBTableName
           ENVIRONMENT: !Ref Environment
-          # APNs Token-based Authentication (JWT tokens - modern approach)
-          # These will need to be set manually in Lambda console after deployment:
-          # APNS_TEAM_ID: Your Apple Developer Team ID (10 characters)
-          # APNS_KEY_ID: Your APNs Key ID (10 characters)
-          # APNS_SECRET_NAME: Name of AWS Secrets Manager secret containing the P8 private key
-          # APNS_BUNDLE_ID: Your app's bundle identifier
-          APNS_TEAM_ID: ""
-          APNS_KEY_ID: ""
+          # APNS_SECRET_NAME is set here, others must be configured manually in Lambda console
           APNS_SECRET_NAME: !Sub ${Environment}/mailreader/apns/private-key
-          APNS_BUNDLE_ID: ""
       Code:
         ZipFile: |
           // Placeholder - actual code will be uploaded via deployment package
