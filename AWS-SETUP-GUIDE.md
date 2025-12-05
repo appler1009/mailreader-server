@@ -115,6 +115,35 @@ aws lambda get-function-url-config --function-name gmail-push-dev-lambda
 
 The URL will look like: `https://abcdef1234567890.lambda-url.us-west-2.on.aws`
 
+### AWS Secrets Manager Setup
+**Performed by**: You manually in AWS Console
+
+Before configuring environment variables, you need to store your APNs private key securely in AWS Secrets Manager:
+
+1. **Access Secrets Manager Console**
+   - Go to [AWS Secrets Manager Console](https://console.aws.amazon.com/secretsmanager)
+   - Click **"Store a new secret"**
+
+2. **Create the Secret**
+   - Choose **"Other type of secret"**
+   - Key: Leave as "Secret key/value"
+   - Value: Paste your complete P8 private key (including `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines)
+   - Click **"Next"**
+
+3. **Configure Secret Details**
+   - Secret name: `{environment}/mailreader/apns/private-key` (e.g., `dev/mailreader/apns/private-key`)
+   - Description: "APNs private key for Gmail push notifications"
+   - Click **"Next"**
+
+4. **Configure Rotation** (Optional)
+   - Skip automatic rotation for now
+   - Click **"Next"**
+
+5. **Review and Store**
+   - Review the settings and click **"Store"**
+
+**Note**: The CloudFormation template already includes the necessary IAM permissions for the Lambda function to access this secret.
+
 ### Lambda Environment Variables
 **Performed by**: You manually in Lambda console
 
@@ -160,12 +189,12 @@ This token-based approach is preferred over certificates because:
    - Click **"Save"**
    - **Example**: `XYZXY123AB`
 
-   **APNS_PRIVATE_KEY** (P8 Key):
+   **APNS_SECRET_NAME** (Secrets Manager):
    - Click **"Add environment variable"**
-   - Key: `APNS_PRIVATE_KEY`
-   - Value: Your APNs private key (P8 file content - include the full key with BEGIN/END lines)
+   - Key: `APNS_SECRET_NAME`
+   - Value: The name of your AWS Secrets Manager secret containing the P8 private key (e.g., `dev/mailreader/apns/private-key`)
    - Click **"Save"**
-   - **Important**: Must include the complete P8 key content
+   - **Important**: The secret must contain the complete P8 key content with BEGIN/END lines
 
    **APNS_BUNDLE_ID** (Bundle Identifier):
    - Click **"Add environment variable"**
@@ -196,8 +225,9 @@ This token-based approach is preferred over certificates because:
    - Copy the Bundle ID exactly as shown
 
 **Important Security Notes:**
-- **Keep APNS_PRIVATE_KEY secure** - it should never be committed to version control
-- The P8 private key must include the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines
+- **Store APNS private key securely in AWS Secrets Manager** - it should never be committed to version control or stored as environment variables
+- The P8 private key must include the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines in the Secrets Manager secret
+- Ensure your Lambda execution role has permissions to access the Secrets Manager secret
 - All values are case-sensitive and must be entered exactly as provided by Apple
 - Token-based authentication automatically refreshes every hour
 - After setting these variables, you may need to redeploy the Lambda function for changes to take effect

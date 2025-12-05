@@ -114,7 +114,7 @@ jobs:
         echo "🔐 Required Environment Variables:"
         echo "- APNS_TEAM_ID"
         echo "- APNS_KEY_ID"
-        echo "- APNS_PRIVATE_KEY"
+        echo "- APNS_SECRET_NAME"
         echo "- APNS_BUNDLE_ID"
 
     - name: Notify deployment

@@ -47,7 +47,7 @@ describe('Gmail Push Notification Lambda', () => {
       DYNAMODB_TABLE_NAME: 'test-table',
       APNS_TEAM_ID: 'TESTTEAM123',
       APNS_KEY_ID: 'TESTKEY1234',
-      APNS_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\nTESTKEY\n-----END PRIVATE KEY-----',
+      APNS_SECRET_NAME: 'test/apns/private-key',
       APNS_BUNDLE_ID: 'com.test.gmailpush'
     };
     
@@ -248,7 +248,7 @@ describe('Gmail Push Notification Lambda', () => {
       expect(process.env.DYNAMODB_TABLE_NAME).toBe('test-table');
       expect(process.env.APNS_TEAM_ID).toBe('TESTTEAM123');
       expect(process.env.APNS_KEY_ID).toBe('TESTKEY1234');
-      expect(process.env.APNS_PRIVATE_KEY).toBeDefined();
+      expect(process.env.APNS_SECRET_NAME).toBe('test/apns/private-key');
       expect(process.env.APNS_BUNDLE_ID).toBe('com.test.gmailpush');
     });
   });
