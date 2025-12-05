@@ -62,6 +62,11 @@ const APNS_SANDBOX = 'api.sandbox.push.apple.com';
 
 // Helper function to generate APNS JWT token
 async function generateAPNSToken() {
+  // Validate required environment variables
+  if (!APNS_TEAM_ID || !APNS_KEY_ID || !APNS_BUNDLE_ID) {
+    throw new Error('Missing required APNs environment variables: APNS_TEAM_ID, APNS_KEY_ID, or APNS_BUNDLE_ID');
+  }
+
   const header = {
     alg: 'ES256',
     kid: APNS_KEY_ID,
@@ -76,6 +81,9 @@ async function generateAPNSToken() {
   };
 
   const privateKey = await getAPNSPrivateKey();
+
+  console.log(`Generating APNs token with Team ID: ${APNS_TEAM_ID}, Key ID: ${APNS_KEY_ID}, Bundle ID: ${APNS_BUNDLE_ID}`);
+
   return jwt.sign(payload, privateKey, {
     algorithm: 'ES256',
     header: header
