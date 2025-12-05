@@ -229,8 +229,10 @@ function parseGmailMessage(message) {
 
 // Handle device registration/unregistration requests
 async function handleDeviceRequest(event) {
-  const { httpMethod, path, body } = event;
-  
+  const method = event.requestContext.http.method;
+  const path = event.requestContext.http.path;
+  const body = event.body;
+
   try {
     const requestData = JSON.parse(body);
     const { email, deviceToken } = requestData;
@@ -251,9 +253,9 @@ async function handleDeviceRequest(event) {
     }
 
     let result;
-    if (httpMethod === 'POST' && path === '/device') {
+    if (method === 'POST' && path === '/device') {
       result = await registerDevice(email, deviceToken);
-    } else if (httpMethod === 'DELETE' && path === '/device') {
+    } else if (method === 'DELETE' && path === '/device') {
       result = await unregisterDevice(email, deviceToken);
     } else {
       return {
@@ -381,13 +383,17 @@ exports.handler = async (event) => {
   console.log('Lambda invoked with event:', JSON.stringify(event, null, 2));
 
   try {
-    // Check if this is device registration/unregistration (ALB event)
-    if (event.httpMethod && event.path === '/device') {
+    // Extract method and path for Function URL events
+    const method = event.requestContext.http.method;
+    const path = event.requestContext.http.path;
+
+    // Check if this is device registration/unregistration
+    if (method && path === '/device') {
       return await handleDeviceRequest(event);
     }
-    
-    // Check if this is a Gmail pub/sub notification (ALB event)
-    if (event.httpMethod === 'POST' && event.path === '/gmail-notification') {
+
+    // Check if this is a Gmail pub/sub notification
+    if (method === 'POST' && path === '/gmail-notification') {
       return await handleGmailNotification(event);
     }
 
