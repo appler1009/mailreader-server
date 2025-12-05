@@ -131,6 +131,13 @@ Resources:
       Principal: '*'
       FunctionUrlAuthType: NONE
 
+  LambdaFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: '*'
+
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
