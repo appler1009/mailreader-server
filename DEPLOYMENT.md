@@ -16,6 +16,9 @@ Configure these secrets in your GitHub repository:
 AWS_ACCESS_KEY_ID=<your-aws-access-key>
 AWS_SECRET_ACCESS_KEY=<your-aws-secret-key>
 AWS_REGION=<aws-region>
+APNS_TEAM_ID=<your-apple-team-id>
+APNS_KEY_ID=<your-apns-key-id>
+APNS_BUNDLE_ID=<your-ios-bundle-id>
 ```
 
 ### 3. IAM Permissions
@@ -53,18 +56,18 @@ The deployment creates these AWS resources:
 
 ### Lambda Function
 - **Function**: `gmail-push-{environment}-lambda`
-- **Runtime**: Node.js 18.x
-- **Memory**: 512 MB
+- **Runtime**: Node.js 20.x
+- **Memory**: 192 MB
 - **Timeout**: 30 seconds
-- **Role**: IAM role with DynamoDB and CloudWatch access
-- **Permissions**: ALB can invoke function
+- **Role**: IAM role with DynamoDB, CloudWatch, and Secrets Manager access
+- **Permissions**: Function URL allows public access
 
-### ALB Configuration Required
-After deployment, configure an Application Load Balancer:
-- **Target Group**: Point to Lambda function
-- **Listener Rules**:
-  - `/device` → POST (register), DELETE (unregister)
-  - `/gmail-notification` → POST (Gmail notifications)
+### Lambda Function URL
+The deployment automatically creates a Lambda Function URL for HTTPS access:
+- **URL**: `https://{function-id}.lambda-url.{region}.on.aws`
+- **Authentication**: None (public access)
+- **CORS**: Enabled for all origins
+- **Supported Methods**: GET, POST, DELETE, OPTIONS
 
 ## Post-Deployment Configuration
 
@@ -86,29 +89,23 @@ aws secretsmanager create-secret \
 ```
 
 ### 2. Environment Variables
-After deployment, set these in Lambda console:
-```bash
-APNS_TEAM_ID=<your-apple-team-id>
-APNS_KEY_ID=<your-apns-key-id>
-APNS_SECRET_NAME={environment}/mailreader/apns/private-key  # Set automatically by CloudFormation
-APNS_BUNDLE_ID=<your-ios-bundle-id>
-```
+Environment variables are automatically configured during deployment via CloudFormation parameters and GitHub secrets:
 
-### 2. ALB Setup
-Create an Application Load Balancer:
-- **Target Group**: Point to Lambda function
-- **Listener Rules**:
-  - `/device` → POST (register)
-  - `/device` → DELETE (unregister)
-  - `/gmail-notification` → POST (Gmail notifications)
-- **SSL Certificate**: Configure for HTTPS if needed
-- **Security Groups**: Allow HTTP/HTTPS traffic
+- `APNS_TEAM_ID`: Set from `APNS_TEAM_ID` GitHub secret
+- `APNS_KEY_ID`: Set from `APNS_KEY_ID_DEV` or `APNS_KEY_ID_PROD` based on environment
+- `APNS_BUNDLE_ID`: Set from `APNS_BUNDLE_ID` GitHub secret
+- `APNS_SECRET_NAME`: Set automatically to `{environment}/mailreader/apns/private-key`
+
+### 3. Function URL Access
+The Lambda Function URL is created automatically and provides direct HTTPS access to your endpoints:
+- `/device` → POST (register), DELETE (unregister)
+- `/gmail-notification` → POST (Gmail notifications)
 
 ### 3. Gmail API Setup
 - Enable Gmail API in Google Cloud Console
 - Create Pub/Sub topic and subscription
 - Configure Gmail watch notifications
-- Set push endpoint to ALB URL: `https://your-alb-domain/gmail-notification`
+- Set push endpoint to Function URL: `https://{function-id}.lambda-url.{region}.on.aws/gmail-notification`
 
 ## Deployment Verification
 
@@ -120,8 +117,11 @@ aws cloudformation describe-stacks \
 
 ### Test Lambda Function
 ```bash
+# Get your Function URL
+aws lambda get-function-url-config --function-name gmail-push-dev-lambda --query FunctionUrl --output text
+
 # Test device registration
-curl -X POST https://your-alb-url/device \
+curl -X POST https://your-function-url/device \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","deviceToken":"test123"}'
 ```
@@ -163,8 +163,9 @@ aws cloudformation delete-stack \
 ### Common Issues
 
 1. **Environment Variables Not Set**
-   - Check Lambda console → Configuration → Environment variables
-   - Verify APNS credentials are valid
+    - Check Lambda console → Configuration → Environment variables
+    - Verify GitHub secrets are configured correctly
+    - Redeploy if environment variables are missing
 
 2. **API Gateway 500 Errors**
    - Check Lambda function logs

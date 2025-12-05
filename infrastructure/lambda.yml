@@ -2,14 +2,26 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Lambda function for Gmail Push Notifications
 
 Parameters:
-  Environment:
-    Type: String
-    Default: dev
-    AllowedValues: [dev, staging, prod]
-    Description: Deployment environment
-  DynamoDBTableName:
-    Type: String
-    Description: DynamoDB table name
+   Environment:
+     Type: String
+     Default: dev
+     AllowedValues: [dev, staging, prod]
+     Description: Deployment environment
+   DynamoDBTableName:
+     Type: String
+     Description: DynamoDB table name
+   APNSTeamId:
+     Type: String
+     Description: Apple Developer Team ID for APNs
+     Default: ""
+   APNSKeyId:
+     Type: String
+     Description: APNs Key ID
+     Default: ""
+   APNSBundleId:
+     Type: String
+     Description: App bundle identifier for APNs
+     Default: ""
 
 Resources:
   LambdaExecutionRole:
@@ -77,8 +89,10 @@ Resources:
           NODE_OPTIONS: --enable-source-maps
           DYNAMODB_TABLE_NAME: !Ref DynamoDBTableName
           ENVIRONMENT: !Ref Environment
-          # APNS_SECRET_NAME is set here, others must be configured manually in Lambda console
           APNS_SECRET_NAME: !Sub ${Environment}/mailreader/apns/private-key
+          APNS_TEAM_ID: !Ref APNSTeamId
+          APNS_KEY_ID: !Ref APNSKeyId
+          APNS_BUNDLE_ID: !Ref APNSBundleId
       Code:
         ZipFile: |
           // Placeholder - actual code will be uploaded via deployment package

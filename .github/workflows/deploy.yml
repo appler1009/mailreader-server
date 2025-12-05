@@ -88,6 +88,9 @@ jobs:
           --parameter-overrides \
             Environment=${{ env.DEPLOY_ENV }} \
             DynamoDBTableName=gmail-push-${{ env.DEPLOY_ENV }}-devices \
+            APNSTeamId=${{ secrets.APNS_TEAM_ID }} \
+            APNSKeyId=${{ secrets.APNS_KEY_ID }} \
+            APNSBundleId=${{ secrets.APNS_BUNDLE_ID }} \
           --capabilities CAPABILITY_NAMED_IAM \
           --tags \
             Environment=${{ env.DEPLOY_ENV }} \

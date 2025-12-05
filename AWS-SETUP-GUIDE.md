@@ -68,6 +68,9 @@ Add these secrets in your GitHub repo (Settings → Secrets and variables → Ac
 | `AWS_ACCESS_KEY_ID` | Access key from the IAM user |
 | `AWS_SECRET_ACCESS_KEY` | Secret key from the IAM user |
 | `AWS_REGION` | Your chosen AWS region |
+| `APNS_TEAM_ID` | Your Apple Developer Team ID (10 characters) |
+| `APNS_KEY_ID` | Your APNs Key ID |
+| `APNS_BUNDLE_ID` | Your iOS app bundle identifier |
 
 ## 4. Lambda Function URL Configuration
 
@@ -145,14 +148,14 @@ Before configuring environment variables, you need to store your APNs private ke
 **Note**: The CloudFormation template already includes the necessary IAM permissions for the Lambda function to access this secret.
 
 ### Lambda Environment Variables
-**Performed by**: You manually in Lambda console
+**Performed by**: GitHub Actions automatically during deployment
 
 **Authentication Method**: Token-based APNs (Modern approach using JWT tokens)
 
 **What are APNs Tokens?**
 Your application uses **token-based authentication** (not certificates) for Apple Push Notifications. This modern approach uses:
 - **Team ID**: Your Apple Developer Team identifier
-- **Key ID**: Your APNs Key identifier  
+- **Key ID**: Your APNs Key identifier
 - **Private Key**: P8 key file for JWT token generation
 - **Bundle ID**: Your app's unique identifier
 
@@ -161,51 +164,20 @@ This token-based approach is preferred over certificates because:
 - Easier management and rotation
 - More secure and modern
 
-**Step-by-Step Instructions:**
+**Automatic Configuration:**
+Environment variables are set automatically during deployment using values from GitHub secrets:
 
-1. **Access Lambda Console**
-   - Go to [AWS Lambda Console](https://console.aws.amazon.com/lambda)
-   - Navigate to Functions in the left sidebar
-   - Find your function: `gmail-push-{environment}-lambda` (e.g., `gmail-push-dev-lambda`)
+- `APNS_TEAM_ID`: From `APNS_TEAM_ID` secret
+- `APNS_KEY_ID`: From `APNS_KEY_ID` secret
+- `APNS_BUNDLE_ID`: From `APNS_BUNDLE_ID` secret
+- `APNS_SECRET_NAME`: Set automatically to `{environment}/mailreader/apns/private-key`
 
-2. **Navigate to Configuration Tab**
-   - Click on your Lambda function name
-   - Click on the **"Configuration"** tab
-   - In the left sidebar, click on **"Environment variables"**
-
-3. **Add Each Environment Variable**
-   
-   **APNS_TEAM_ID** (Team ID):
-   - Click **"Add environment variable"**
-   - Key: `APNS_TEAM_ID`
-   - Value: Your Apple Developer Team ID (10-character string from Apple Developer account)
-   - Click **"Save"**
-   - **Example**: `ABCDE12345`
-
-   **APNS_KEY_ID** (Key ID):
-   - Click **"Add environment variable"**
-   - Key: `APNS_KEY_ID`
-   - Value: Your APNs Key ID (10-character string from Apple Developer account)
-   - Click **"Save"**
-   - **Example**: `XYZXY123AB`
-
-   **APNS_SECRET_NAME** (Secrets Manager):
-   - Click **"Add environment variable"**
-   - Key: `APNS_SECRET_NAME`
-   - Value: The name of your AWS Secrets Manager secret containing the P8 private key (e.g., `dev/mailreader/apns/private-key`)
-   - Click **"Save"**
-   - **Important**: The secret must contain the complete P8 key content with BEGIN/END lines
-
-   **APNS_BUNDLE_ID** (Bundle Identifier):
-   - Click **"Add environment variable"**
-   - Key: `APNS_BUNDLE_ID`
-   - Value: Your app's bundle ID (must match your app's identifier)
-   - Click **"Save"**
-   - **Example**: `com.yourcompany.gmailpush`
-
-4. **Save Changes**
-   - Click **"Save"** at the top of the page to save all environment variables
-   - Wait for the "Configuration updated" notification
+**Manual Verification (Optional):**
+You can verify the environment variables were set correctly in the Lambda console:
+1. Go to [AWS Lambda Console](https://console.aws.amazon.com/lambda)
+2. Find your function: `gmail-push-{environment}-lambda`
+3. Click **"Configuration"** → **"Environment variables"**
+4. Verify all APNs variables are present with correct values
 
 **Where to Find APNs Token Credentials:**
 1. **Apple Developer Account**: Sign in to [developer.apple.com](https://developer.apple.com)
