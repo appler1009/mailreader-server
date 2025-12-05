@@ -63,8 +63,12 @@ describe('Gmail Push Notification Lambda', () => {
 
     test('should handle device registration request', async () => {
       const event = {
-        httpMethod: 'POST',
-        path: '/device',
+        requestContext: {
+          http: {
+            method: 'POST',
+            path: '/device'
+          }
+        },
         body: JSON.stringify({
           email: 'test@example.com',
           deviceToken: 'test-token-123'
@@ -85,8 +89,12 @@ describe('Gmail Push Notification Lambda', () => {
 
     test('should handle device unregistration request', async () => {
       const event = {
-        httpMethod: 'DELETE',
-        path: '/device',
+        requestContext: {
+          http: {
+            method: 'DELETE',
+            path: '/device'
+          }
+        },
         body: JSON.stringify({
           email: 'test@example.com',
           deviceToken: 'test-token-123'
@@ -107,8 +115,12 @@ describe('Gmail Push Notification Lambda', () => {
 
     test('should handle Gmail notification request', async () => {
       const event = {
-        httpMethod: 'POST',
-        path: '/gmail-notification',
+        requestContext: {
+          http: {
+            method: 'POST',
+            path: '/gmail-notification'
+          }
+        },
         body: JSON.stringify({
           message: {
             data: JSON.stringify({
@@ -133,8 +145,12 @@ describe('Gmail Push Notification Lambda', () => {
 
     test('should return 400 for invalid request format', async () => {
       const event = {
-        httpMethod: 'GET',
-        path: '/invalid'
+        requestContext: {
+          http: {
+            method: 'GET',
+            path: '/invalid'
+          }
+        }
       };
 
       const result = await lambda.handler(event);
@@ -147,8 +163,12 @@ describe('Gmail Push Notification Lambda', () => {
 
     test('should return 400 for missing required fields in device request', async () => {
       const event = {
-        httpMethod: 'POST',
-        path: '/device',
+        requestContext: {
+          http: {
+            method: 'POST',
+            path: '/device'
+          }
+        },
         body: JSON.stringify({
           email: 'test@example.com'
           // Missing deviceToken
@@ -165,8 +185,12 @@ describe('Gmail Push Notification Lambda', () => {
 
     test('should return 500 for invalid JSON in request body', async () => {
       const event = {
-        httpMethod: 'POST',
-        path: '/device',
+        requestContext: {
+          http: {
+            method: 'POST',
+            path: '/device'
+          }
+        },
         body: 'invalid json'
       };
 
@@ -181,8 +205,12 @@ describe('Gmail Push Notification Lambda', () => {
 
     test('should handle missing message body in Gmail notification', async () => {
       const event = {
-        httpMethod: 'POST',
-        path: '/gmail-notification',
+        requestContext: {
+          http: {
+            method: 'POST',
+            path: '/gmail-notification'
+          }
+        },
         body: JSON.stringify({})
       };
 
@@ -199,10 +227,14 @@ describe('Gmail Push Notification Lambda', () => {
   describe('CORS Headers', () => {
     test('should include CORS headers in device endpoints', async () => {
       const { handler } = require('../index.js');
-      
+
       const event = {
-        httpMethod: 'POST',
-        path: '/device',
+        requestContext: {
+          http: {
+            method: 'POST',
+            path: '/device'
+          }
+        },
         body: JSON.stringify({
           email: 'test@example.com',
           deviceToken: 'test-token'
@@ -221,10 +253,14 @@ describe('Gmail Push Notification Lambda', () => {
 
     test('should include CORS headers for Gmail notification endpoints', async () => {
       const { handler } = require('../index.js');
-      
+
       const event = {
-        httpMethod: 'POST',
-        path: '/gmail-notification',
+        requestContext: {
+          http: {
+            method: 'POST',
+            path: '/gmail-notification'
+          }
+        },
         body: JSON.stringify({
           message: {
             data: JSON.stringify({
@@ -263,8 +299,12 @@ describe('Gmail Push Notification Lambda', () => {
       const { handler } = require('../index.js');
       
       const event = {
-        httpMethod: 'POST',
-        path: '/device',
+        requestContext: {
+          http: {
+            method: 'POST',
+            path: '/device'
+          }
+        },
         body: JSON.stringify({
           email: 'test@example.com',
           deviceToken: 'test-token'
@@ -284,8 +324,12 @@ describe('Gmail Push Notification Lambda', () => {
       const { handler } = require('../index.js');
       
       const event = {
-        httpMethod: 'POST',
-        path: '/gmail-notification',
+        requestContext: {
+          http: {
+            method: 'POST',
+            path: '/gmail-notification'
+          }
+        },
         body: JSON.stringify({
           message: {
             data: 'invalid base64 json'
