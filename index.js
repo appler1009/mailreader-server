@@ -149,17 +149,14 @@ async function registerDevice(email, deviceToken) {
       deviceToken: deviceToken,
       registeredAt: new Date().toISOString(),
       lastActive: new Date().toISOString()
-    },
-    ConditionExpression: 'email <> :email OR deviceToken <> :deviceToken'
+    }
   };
 
   try {
     await dynamodb.put(params).promise();
     return { success: true, message: 'Device registered successfully' };
   } catch (error) {
-    if (error.code === 'ConditionalCheckFailedException') {
-      return { success: true, message: 'Device already registered' };
-    }
+    // Since email + deviceToken is the composite key, duplicates will be updated
     throw error;
   }
 }

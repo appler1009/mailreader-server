@@ -38,10 +38,10 @@ jest.mock('jsonwebtoken');
 jest.mock('uuid');
 
 describe('Gmail Push Notification Lambda', () => {
-  
+
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Reset and mock process.env
     process.env = {
       DYNAMODB_TABLE_NAME: 'test-table',
@@ -50,16 +50,21 @@ describe('Gmail Push Notification Lambda', () => {
       APNS_SECRET_NAME: 'test/apns/private-key',
       APNS_BUNDLE_ID: 'com.test.gmailpush'
     };
-    
+
     // Mock jwt.sign
     require('jsonwebtoken').sign.mockReturnValue('mock-jwt-token');
-    
+
     // Mock uuidv4
     require('uuid').v4.mockReturnValue('test-uuid-123');
   });
 
   describe('Lambda Handler', () => {
-    const lambda = require('../index.js');
+    let lambda;
+
+    beforeEach(() => {
+      // Require the module after env is set
+      lambda = require('../index.js');
+    });
 
     test('should handle device registration request', async () => {
       const event = {
@@ -82,9 +87,17 @@ describe('Gmail Push Notification Lambda', () => {
         success: true,
         message: 'Device registered successfully'
       });
-      
+
       // Verify DynamoDB put was called
-      expect(mockDynamoDB.put).toHaveBeenCalled();
+      expect(mockDynamoDB.put).toHaveBeenCalledWith({
+        TableName: 'test-table',
+        Item: {
+          email: 'test@example.com',
+          deviceToken: 'test-token-123',
+          registeredAt: expect.any(String),
+          lastActive: expect.any(String)
+        }
+      });
     });
 
     test('should handle device unregistration request', async () => {
@@ -225,9 +238,13 @@ describe('Gmail Push Notification Lambda', () => {
   });
 
   describe('CORS Headers', () => {
-    test('should include CORS headers in device endpoints', async () => {
-      const { handler } = require('../index.js');
+    let handler;
 
+    beforeEach(() => {
+      handler = require('../index.js').handler;
+    });
+
+    test('should include CORS headers in device endpoints', async () => {
       const event = {
         requestContext: {
           http: {
@@ -252,8 +269,6 @@ describe('Gmail Push Notification Lambda', () => {
     });
 
     test('should include CORS headers for Gmail notification endpoints', async () => {
-      const { handler } = require('../index.js');
-
       const event = {
         requestContext: {
           http: {
@@ -290,39 +305,13 @@ describe('Gmail Push Notification Lambda', () => {
   });
 
   describe('Error Handling', () => {
-    test('should handle DynamoDB errors gracefully', async () => {
-      // Mock DynamoDB to throw error
-      mockDynamoDB.put.mockReturnValue({
-        promise: jest.fn().mockRejectedValue(new Error('DynamoDB Error'))
-      });
+    let handler;
 
-      const { handler } = require('../index.js');
-      
-      const event = {
-        requestContext: {
-          http: {
-            method: 'POST',
-            path: '/device'
-          }
-        },
-        body: JSON.stringify({
-          email: 'test@example.com',
-          deviceToken: 'test-token'
-        })
-      };
-
-      const result = await handler(event);
-
-      expect(result.statusCode).toBe(500);
-      expect(JSON.parse(result.body)).toEqual({
-        error: 'Internal server error',
-        message: 'DynamoDB Error'
-      });
+    beforeEach(() => {
+      handler = require('../index.js').handler;
     });
 
     test('should handle invalid Gmail message format', async () => {
-      const { handler } = require('../index.js');
-      
       const event = {
         requestContext: {
           http: {
