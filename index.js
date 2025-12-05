@@ -348,6 +348,13 @@ async function handleGmailNotification(event) {
     const successful = results.filter(r => r.status === 'fulfilled').length;
     const failed = results.filter(r => r.status === 'rejected').length;
 
+    // Log details of failed notifications
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.error(`Notification failed for device ${devices[index].deviceToken}:`, result.reason);
+      }
+    });
+
     console.log(`Notifications sent: ${successful} successful, ${failed} failed for email: ${email}`);
 
     return {
