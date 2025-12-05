@@ -212,6 +212,21 @@ Ensure your Lambda execution role has the following permissions:
 }
 ```
 
+## Development
+
+### Git Hooks Setup
+
+This project includes Git hooks to enforce code quality:
+
+- **Pre-push Hook**: Automatically runs the test suite before any push
+- **Location**: `.githooks/pre-push` (committed to repo)
+- **Setup**: After cloning, run: `git config core.hooksPath .githooks`
+- **Behavior**: If tests fail, the push is blocked
+
+### Testing Requirements
+
+See [AGENTS.md](AGENTS.md) for detailed testing guidelines that must be followed after any code changes.
+
 ## Testing
 
 ### Get Function URLs
