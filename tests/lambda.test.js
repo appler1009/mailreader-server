@@ -127,6 +127,11 @@ describe('Gmail Push Notification Lambda', () => {
     });
 
     test('should handle Gmail notification request', async () => {
+      const gmailData = JSON.stringify({
+        emailAddress: 'test@example.com',
+        historyId: '1234567890'
+      });
+      const base64Data = Buffer.from(gmailData).toString('base64');
       const event = {
         requestContext: {
           http: {
@@ -136,10 +141,7 @@ describe('Gmail Push Notification Lambda', () => {
         },
         body: JSON.stringify({
           message: {
-            data: JSON.stringify({
-              emailAddress: 'test@example.com',
-              historyId: '1234567890'
-            })
+            data: base64Data
           }
         })
       };
@@ -269,6 +271,11 @@ describe('Gmail Push Notification Lambda', () => {
     });
 
     test('should include CORS headers for Gmail notification endpoints', async () => {
+      const gmailData = JSON.stringify({
+        emailAddress: 'test@example.com',
+        historyId: '1234567890'
+      });
+      const base64Data = Buffer.from(gmailData).toString('base64');
       const event = {
         requestContext: {
           http: {
@@ -278,10 +285,7 @@ describe('Gmail Push Notification Lambda', () => {
         },
         body: JSON.stringify({
           message: {
-            data: JSON.stringify({
-              emailAddress: 'test@example.com',
-              historyId: '1234567890'
-            })
+            data: base64Data
           }
         })
       };

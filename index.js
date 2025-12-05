@@ -198,7 +198,8 @@ async function getUserDevices(email) {
 // Parse Gmail pub/sub message
 function parseGmailMessage(message) {
   try {
-    const data = JSON.parse(message.data);
+    const decodedData = Buffer.from(message.data, 'base64').toString('utf-8');
+    const data = JSON.parse(decodedData);
     const email = data.emailAddress || data.email;
     const historyId = data.historyId;
     
