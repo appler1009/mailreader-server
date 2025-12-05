@@ -46,6 +46,15 @@ Resources:
                   - dynamodb:Scan
                 Resource:
                   - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DynamoDBTableName}/index/*
+        - PolicyName: SecretsManagerAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Environment}/mailreader/apns/private-key
       Tags:
         - Key: Environment
           Value: !Ref Environment
@@ -71,12 +80,12 @@ Resources:
           # APNs Token-based Authentication (JWT tokens - modern approach)
           # These will need to be set manually in Lambda console after deployment:
           # APNS_TEAM_ID: Your Apple Developer Team ID (10 characters)
-          # APNS_KEY_ID: Your APNs Key ID (10 characters) 
-          # APNS_PRIVATE_KEY: Your P8 private key file content
+          # APNS_KEY_ID: Your APNs Key ID (10 characters)
+          # APNS_SECRET_NAME: Name of AWS Secrets Manager secret containing the P8 private key
           # APNS_BUNDLE_ID: Your app's bundle identifier
           APNS_TEAM_ID: ""
           APNS_KEY_ID: ""
-          APNS_PRIVATE_KEY: ""
+          APNS_SECRET_NAME: !Sub ${Environment}/mailreader/apns/private-key
           APNS_BUNDLE_ID: ""
       Code:
         ZipFile: |

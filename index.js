@@ -5,15 +5,38 @@ const { v4: uuidv4 } = require('uuid');
 
 // Initialize AWS clients
 const dynamodb = new AWS.DynamoDB.DocumentClient();
+const secretsManager = new AWS.SecretsManager();
 
 // Environment variables (set these in Lambda configuration)
 const {
   DYNAMODB_TABLE_NAME,
   APNS_TEAM_ID,
   APNS_KEY_ID,
-  APNS_PRIVATE_KEY,
+  APNS_SECRET_NAME,
   APNS_BUNDLE_ID
 } = process.env;
+
+// Cache for APNS private key to avoid repeated Secrets Manager calls
+let apnsPrivateKeyCache = null;
+
+/**
+ * Retrieve APNS private key from AWS Secrets Manager
+ * @returns {Promise<string>} The private key content
+ */
+async function getAPNSPrivateKey() {
+  if (apnsPrivateKeyCache) {
+    return apnsPrivateKeyCache;
+  }
+
+  try {
+    const response = await secretsManager.getSecretValue({ SecretId: APNS_SECRET_NAME }).promise();
+    apnsPrivateKeyCache = response.SecretString || Buffer.from(response.SecretBinary, 'base64').toString('ascii');
+    return apnsPrivateKeyCache;
+  } catch (error) {
+    console.error('Failed to retrieve APNS private key from Secrets Manager:', error);
+    throw new Error('Unable to retrieve APNS private key');
+  }
+}
 
 /**
  * APNs Token-based Authentication Setup
@@ -27,8 +50,8 @@ const {
  * 
  * Required Environment Variables:
  * - APNS_TEAM_ID: Your Apple Developer Team ID (10 characters)
- * - APNS_KEY_ID: Your APNs Key ID (10 characters) 
- * - APNS_PRIVATE_KEY: Your P8 private key file content
+ * - APNS_KEY_ID: Your APNs Key ID (10 characters)
+ * - APNS_SECRET_NAME: Name of AWS Secrets Manager secret containing the P8 private key
  * - APNS_BUNDLE_ID: Your app's bundle identifier
  */
 
@@ -37,7 +60,7 @@ const APNS_PRODUCTION = 'api.push.apple.com';
 const APNS_SANDBOX = 'api.sandbox.apple.com';
 
 // Helper function to generate APNS JWT token
-function generateAPNSToken() {
+async function generateAPNSToken() {
   const header = {
     alg: 'ES256',
     kid: APNS_KEY_ID,
@@ -48,52 +71,53 @@ function generateAPNSToken() {
     iss: APNS_TEAM_ID,
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + 3600, // 1 hour
-    aud: 'apns押1'
+    aud: 'apns'
   };
 
-  return jwt.sign(payload, APNS_PRIVATE_KEY, {
+  const privateKey = await getAPNSPrivateKey();
+  return jwt.sign(payload, privateKey, {
     algorithm: 'ES256',
     header: header
   });
 }
 
 // Helper function to send APNS notification
-function sendAPNSNotification(deviceToken, notification, isProduction = false) {
+async function sendAPNSNotification(deviceToken, notification, isProduction = false) {
+  const token = await generateAPNSToken();
+  const host = isProduction ? APNS_PRODUCTION : APNS_SANDBOX;
+
+  const payload = {
+    aps: {
+      alert: notification.alert,
+      badge: notification.badge || 0,
+      sound: notification.sound || 'default',
+      category: notification.category || 'GMAIL_NOTIFICATION'
+    },
+    gmail: notification.gmailData || {}
+  };
+
+  const postData = JSON.stringify(payload);
+
+  const options = {
+    hostname: host,
+    port: 443,
+    path: `/3/device/${deviceToken}`,
+    method: 'POST',
+    headers: {
+      'authorization': `bearer ${token}`,
+      'apns-id': uuidv4(),
+      'apns-push-type': 'alert',
+      'apns-priority': '10',
+      'apns-topic': APNS_BUNDLE_ID,
+      'content-type': 'application/json',
+      'content-length': Buffer.byteLength(postData)
+    }
+  };
+
   return new Promise((resolve, reject) => {
-    const token = generateAPNSToken();
-    const host = isProduction ? APNS_PRODUCTION : APNS_SANDBOX;
-    
-    const payload = {
-      aps: {
-        alert: notification.alert,
-        badge: notification.badge || 0,
-        sound: notification.sound || 'default',
-        category: notification.category || 'GMAIL_NOTIFICATION'
-      },
-      gmail: notification.gmailData || {}
-    };
-
-    const postData = JSON.stringify(payload);
-
-    const options = {
-      hostname: host,
-      port: 443,
-      path: `/3/device/${deviceToken}`,
-      method: 'POST',
-      headers: {
-        'authorization': `bearer ${token}`,
-        'apns-id': uuidv4(),
-        'apns-push-type': 'alert',
-        'apns-priority': '10',
-        'apns-topic': APNS_BUNDLE_ID,
-        'content-type': 'application/json',
-        'content-length': Buffer.byteLength(postData)
-      }
-    };
-
     const req = https.request(options, (res) => {
       let data = '';
-      
+
       res.on('data', (chunk) => {
         data += chunk;
       });

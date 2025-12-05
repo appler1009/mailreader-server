@@ -26,6 +26,7 @@ The AWS credentials need these permissions:
 - `dynamodb:*`
 - `iam:*`
 - `logs:*`
+- `secretsmanager:*`
 
 ## Deployment Methods
 
@@ -67,12 +68,29 @@ After deployment, configure an Application Load Balancer:
 
 ## Post-Deployment Configuration
 
-### 1. Environment Variables
+### 1. Create APNS Secrets in AWS Secrets Manager
+Create secrets for your APNS private keys using hierarchical naming:
+
+```bash
+# For dev environment
+aws secretsmanager create-secret \
+  --name dev/mailreader/apns/private-key \
+  --description "APNS private key for mailreader development environment" \
+  --secret-string "<your-dev-apns-private-key-content>"
+
+# For prod environment
+aws secretsmanager create-secret \
+  --name prod/mailreader/apns/private-key \
+  --description "APNS private key for mailreader production environment" \
+  --secret-string "<your-prod-apns-private-key-content>"
+```
+
+### 2. Environment Variables
 After deployment, set these in Lambda console:
 ```bash
 APNS_TEAM_ID=<your-apple-team-id>
 APNS_KEY_ID=<your-apns-key-id>
-APNS_PRIVATE_KEY=<your-apns-private-key>
+APNS_SECRET_NAME={environment}/mailreader/apns/private-key  # Set automatically by CloudFormation
 APNS_BUNDLE_ID=<your-ios-bundle-id>
 ```
 

@@ -1,8 +1,8 @@
 # Gmail Push Notification Lambda
 
-This Lambda function handles Gmail pub/sub notifications and device management through a single invocation method:
+This Lambda function handles Gmail pub/sub notifications and device management using AWS Lambda Function URLs for direct HTTPS access.
 
-**All endpoints via ALB** - Both device management and Gmail notifications use HTTP requests through Application Load Balancer
+**All endpoints via Lambda Function URL** - Both device management and Gmail notifications use HTTP requests through Lambda Function URLs
 
 ## Features
 
@@ -15,23 +15,28 @@ This Lambda function handles Gmail pub/sub notifications and device management t
 ## Architecture
 
 ```
-Gmail → Pub/Sub → ALB → Lambda → APNS → iOS Devices
-                   ↑                │
-                   │                │
-            (Webhook Endpoint) (Handler Routing)
-                   │
-                   │
-        ALB → Lambda (Device Registration/Unregistration)
+Gmail → Pub/Sub → Lambda Function URL → Lambda → APNS → iOS Devices
+                        ↑                           │
+                        │                           │
+                 (Webhook Endpoint)        (Handler Routing)
+                        │
+                        │
+        Lambda Function URL → Lambda (Device Registration/Unregistration)
 ```
+
+**Environments:**
+- **Dev**: `gmail-push-dev-lambda` - Uses APNS sandbox for testing
+- **Prod**: `gmail-push-prod-lambda` - Uses APNS production for live notifications
 
 ## How It Works
 
-### All Endpoints via ALB
-- **Client → ALB → Lambda** - Both device management and Gmail notifications via ALB
+### All Endpoints via Lambda Function URL
+- **Client → Lambda Function URL → Lambda** - Both device management and Gmail notifications via Function URL
 - **Device Management**: `/device` (POST = register, DELETE = unregister)
 - **Gmail Notifications**: `/gmail-notification` (POST) - Receives Pub/Sub push messages
-- **Event Structure**: ALB events with `httpMethod` and `path` properties
+- **Event Structure**: Function URL events with `httpMethod` and `path` properties
 - **Lambda auto-detects** which handler to use based on request path
+- **APNS Environment**: Automatically uses sandbox for dev, production for prod
 
 ### Event Detection Logic
 The Lambda function automatically determines the request type:
@@ -47,8 +52,24 @@ Configure these environment variables in the Lambda function:
 | `DYNAMODB_TABLE_NAME` | Name of DynamoDB table for device storage | Yes |
 | `APNS_TEAM_ID` | Apple Developer Team ID | Yes |
 | `APNS_KEY_ID` | Apple Push Notification service Key ID | Yes |
-| `APNS_PRIVATE_KEY` | Apple Push Notification service Private Key (.p8 file content) | Yes |
+| `APNS_SECRET_NAME` | Name of AWS Secrets Manager secret containing the P8 private key | Yes |
 | `APNS_BUNDLE_ID` | iOS App Bundle ID (e.g., com.yourcompany.app) | Yes |
+| `ENVIRONMENT` | Environment (dev/prod) - auto-configures APNS endpoint | Yes |
+
+## Environments
+
+The Lambda function automatically configures APNS endpoints based on the `ENVIRONMENT` variable:
+
+- **dev**: Uses APNS sandbox (`api.sandbox.push.apple.com`) for testing
+- **prod**: Uses APNS production (`api.push.apple.com`) for live notifications
+
+**Function Names:**
+- Dev: `gmail-push-dev-lambda`
+- Prod: `gmail-push-prod-lambda`
+
+**DynamoDB Tables:**
+- Dev: `gmail-push-dev-devices`
+- Prod: `gmail-push-prod-devices`
 
 ## DynamoDB Table Schema
 
@@ -63,7 +84,7 @@ Create a DynamoDB table with the following configuration:
 
 ## API Endpoints
 
-All endpoints use ALB (Application Load Balancer) with Lambda integration.
+All endpoints use Lambda Function URLs with direct HTTPS access.
 
 ### Device Management
 - **Method**: `POST` (register) / `DELETE` (unregister)
@@ -81,70 +102,49 @@ All endpoints use ALB (Application Load Balancer) with Lambda integration.
 - **Method**: `POST`
 - **Path**: `/gmail-notification`
 - **Purpose**: Receives Gmail pub/sub push messages from Google Cloud Pub/Sub
-- **Authentication**: ALB with HTTPS
+- **Authentication**: Function URL with public access
 - **Event Format**: Pub/Sub push message JSON
 
 ### Endpoint Summary
-- **Device Management**: `https://your-alb-domain/device`
-- **Gmail Notifications**: `https://your-alb-domain/gmail-notification`
+- **Device Management**: `https://[function-id].lambda-url.[region].on.aws/device`
+- **Gmail Notifications**: `https://[function-id].lambda-url.[region].on.aws/gmail-notification`
 
 ## Deployment
 
-### 1. Create Lambda Function
+### Automated Deployment (Recommended)
+
+This project uses GitHub Actions for automated deployment to multiple environments:
+
+- **Dev Environment**: Push to `dev` branch → deploys `gmail-push-dev-lambda`
+- **Prod Environment**: Push to `main` branch → deploys `gmail-push-prod-lambda`
+- **Manual Deployment**: Use GitHub Actions workflow dispatch to choose environment
+
+**Prerequisites:**
+1. Set up AWS credentials in GitHub repository secrets
+2. Configure APNs keys and environment variables
+3. Push to appropriate branch to trigger deployment
+
+### Manual CloudFormation Deployment
+
+For manual deployment to a specific environment:
 
 ```bash
-aws lambda create-function \
-  --function-name gmail-push-notifications \
-  --runtime nodejs18.x \
-  --role arn:aws:iam::ACCOUNT:role/lambda-execution-role \
-  --handler index.handler \
-  --zip-file fileb://function.zip \
-  --environment Variables='{
-    DYNAMODB_TABLE_NAME=DeviceNotifications,
-    APNS_TEAM_ID=YOUR_TEAM_ID,
-    APNS_KEY_ID=YOUR_KEY_ID,
-    APNS_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_KEY_CONTENT\n-----END PRIVATE KEY-----",
-    APNS_BUNDLE_ID=com.yourcompany.app
-  }'
+# Deploy DynamoDB and Lambda for dev environment
+aws cloudformation deploy \
+  --template-file infrastructure/dynamodb.yml \
+  --stack-name gmail-push-dev-infrastructure \
+  --parameter-overrides Environment=dev \
+  --capabilities CAPABILITY_IAM
+
+aws cloudformation deploy \
+  --template-file infrastructure/lambda.yml \
+  --stack-name gmail-push-dev-lambda \
+  --parameter-overrides Environment=dev DynamoDBTableName=gmail-push-dev-devices \
+  --capabilities CAPABILITY_IAM
+
+# Get the Function URL
+aws lambda get-function-url-config --function-name gmail-push-dev-lambda
 ```
-
-### 2. Set up ALB (Application Load Balancer)
-
-1. **Create Application Load Balancer**:
-   ```bash
-   aws elbv2 create-load-balancer \
-     --name gmail-push-alb \
-     --subnets subnet-12345 subnet-67890 \
-     --security-groups sg-12345678
-   ```
-
-2. **Create Target Group**:
-   ```bash
-   aws elbv2 create-target-group \
-     --name gmail-push-targets \
-     --protocol HTTP \
-     --port 80 \
-     --vpc-id vpc-12345678 \
-     --target-type lambda \
-     --targets Id=gmail-push-lambda-arn
-   ```
-
-3. **Create Listener Rules**:
-   ```bash
-   # Device management
-   aws elbv2 create-rule \
-     --listener-arn listener-arn \
-     --priority 100 \
-     --conditions Field=path-pattern,Values=/device \
-     --actions Type=forward,TargetGroupArn=target-group-arn
-   
-   # Gmail notifications  
-   aws elbv2 create-rule \
-     --listener-arn listener-arn \
-     --priority 200 \
-     --conditions Field=path-pattern,Values=/gmail-notification \
-     --actions Type=forward,TargetGroupArn=target-group-arn
-   ```
 
 ### 3. Set up Gmail and Pub/Sub
 
@@ -156,12 +156,17 @@ aws lambda create-function \
    ```bash
    # Create topic
    gcloud pubsub topics create gmail-notifications
-   
-   # Create subscription pointing to ALB
-   gcloud pubsub subscriptions create gmail-push-sub \
+
+   # Create subscriptions for each environment
+   # Dev subscription
+   gcloud pubsub subscriptions create gmail-dev-sub \
      --topic gmail-notifications \
-     --push-endpoint=https://your-alb-domain/gmail-notification \
-     --push-auth-token=optional-auth-token
+     --push-endpoint=https://[dev-function-url]/gmail-notification
+
+   # Prod subscription
+   gcloud pubsub subscriptions create gmail-prod-sub \
+     --topic gmail-notifications \
+     --push-endpoint=https://[prod-function-url]/gmail-notification
    ```
 
 3. **Configure Gmail Watch**:
@@ -209,23 +214,32 @@ Ensure your Lambda execution role has the following permissions:
 
 ## Testing
 
+### Get Function URLs
+```bash
+# Dev environment
+aws lambda get-function-url-config --function-name gmail-push-dev-lambda
+
+# Prod environment
+aws lambda get-function-url-config --function-name gmail-push-prod-lambda
+```
+
 ### Test Device Registration
 ```bash
-curl -X POST https://your-alb-domain/device \
+curl -X POST https://[function-id].lambda-url.[region].on.aws/device \
   -H "Content-Type: application/json" \
   -d '{"email":"test@gmail.com","deviceToken":"test_device_token"}'
 ```
 
 ### Test Device Unregistration
 ```bash
-curl -X DELETE https://your-alb-domain/device \
+curl -X DELETE https://[function-id].lambda-url.[region].on.aws/device \
   -H "Content-Type: application/json" \
   -d '{"email":"test@gmail.com","deviceToken":"test_device_token"}'
 ```
 
 ### Test Gmail Notification Endpoint
 ```bash
-curl -X POST https://your-alb-domain/gmail-notification \
+curl -X POST https://[function-id].lambda-url.[region].on.aws/gmail-notification \
   -H "Content-Type: application/json" \
   -d '{
     "message": {
@@ -261,11 +275,12 @@ Monitor the function using:
 
 ## Security Considerations
 
-- Store APNS private key securely in AWS Secrets Manager or Parameter Store
-- Use HTTPS for all API endpoints
-- Implement authentication for device registration endpoints if needed
+- APNS private keys are securely stored in AWS Secrets Manager with automatic encryption
+- Lambda Function URLs provide HTTPS automatically
+- Function URLs are publicly accessible - implement application-level authentication if needed
 - Regular rotation of APNS keys
 - Monitor for unusual notification patterns
+- Use separate APNs keys for dev/prod environments stored in environment-specific secrets
 
 ## Troubleshooting
 
@@ -286,7 +301,7 @@ Monitor the function using:
    - Confirm environment variables are set
 
 4. **Gmail Notifications Not Processing**
-   - Verify ALB listener rules are configured correctly
-   - Check Pub/Sub push subscription configuration
+   - Verify Pub/Sub push subscription points to correct Function URL
+   - Check Function URL is accessible and returns 200 for test requests
    - Review Lambda function logs for parsing errors
-   - Ensure ALB can invoke Lambda function
+   - Ensure Function URL has public access (AuthType: NONE)
