@@ -31,6 +31,9 @@ coverage/
 .env
 .env.test
 
+# Lambda environment variables (contains sensitive credentials)
+lambda_env_variables.json
+
 # IDE files
 .vscode/
 .idea/
