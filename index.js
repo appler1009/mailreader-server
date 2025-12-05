@@ -1,6 +1,7 @@
 const AWS = require('aws-sdk');
 const jwt = require('jsonwebtoken');
 const https = require('https');
+const http2 = require('http2');
 const { v4: uuidv4 } = require('uuid');
 
 // Initialize AWS clients
@@ -100,12 +101,16 @@ async function sendAPNSNotification(deviceToken, notification, isProduction = fa
 
   const postData = JSON.stringify(payload);
 
-  const options = {
-    hostname: host,
-    port: 443,
-    path: `/3/device/${deviceToken}`,
-    method: 'POST',
-    headers: {
+  return new Promise((resolve, reject) => {
+    const session = http2.connect(`https://${host}`);
+
+    session.on('error', (error) => {
+      reject(error);
+    });
+
+    const req = session.request({
+      ':method': 'POST',
+      ':path': `/3/device/${deviceToken}`,
       'authorization': `bearer ${token}`,
       'apns-id': uuidv4(),
       'apns-push-type': 'alert',
@@ -113,28 +118,29 @@ async function sendAPNSNotification(deviceToken, notification, isProduction = fa
       'apns-topic': APNS_BUNDLE_ID,
       'content-type': 'application/json',
       'content-length': Buffer.byteLength(postData)
-    }
-  };
+    });
 
-  return new Promise((resolve, reject) => {
-    const req = https.request(options, (res) => {
+    req.on('response', (headers) => {
       let data = '';
 
-      res.on('data', (chunk) => {
+      req.on('data', (chunk) => {
         data += chunk;
       });
 
-      res.on('end', () => {
-        if (res.statusCode === 200) {
-          resolve({ success: true, apnsId: res.headers['apns-id'] });
+      req.on('end', () => {
+        const statusCode = headers[':status'];
+        if (statusCode === 200) {
+          resolve({ success: true, apnsId: headers['apns-id'] });
         } else {
-          reject(new Error(`APNS request failed: ${res.statusCode} ${data}`));
+          reject(new Error(`APNS request failed: ${statusCode} ${data}`));
         }
+        session.close();
       });
     });
 
     req.on('error', (error) => {
       reject(error);
+      session.close();
     });
 
     req.write(postData);
