@@ -50,4 +50,7 @@ Thumbs.db
 # AWS deployment artifacts
 .aws-sam/
 
+# Debug scripts
+debug-cloudformation.sh
+
 
