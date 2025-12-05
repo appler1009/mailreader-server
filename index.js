@@ -57,7 +57,7 @@ async function getAPNSPrivateKey() {
 
 // APNS Server endpoints
 const APNS_PRODUCTION = 'api.push.apple.com';
-const APNS_SANDBOX = 'api.sandbox.apple.com';
+const APNS_SANDBOX = 'api.sandbox.push.apple.com';
 
 // Helper function to generate APNS JWT token
 async function generateAPNSToken() {
@@ -85,6 +85,8 @@ async function generateAPNSToken() {
 async function sendAPNSNotification(deviceToken, notification, isProduction = false) {
   const token = await generateAPNSToken();
   const host = isProduction ? APNS_PRODUCTION : APNS_SANDBOX;
+
+  console.log(`Attempting to connect to APNs host: ${host}`);
 
   const payload = {
     aps: {
