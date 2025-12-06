@@ -99,10 +99,7 @@ async function sendAPNSNotification(deviceToken, notification, isProduction = fa
 
   const payload = {
     aps: {
-      alert: notification.alert,
-      badge: notification.badge || 0,
-      sound: notification.sound || 'default',
-      category: notification.category || 'GMAIL_NOTIFICATION'
+      'content-available': 1
     },
     gmail: notification.gmailData || {}
   };
@@ -121,8 +118,8 @@ async function sendAPNSNotification(deviceToken, notification, isProduction = fa
       ':path': `/3/device/${deviceToken}`,
       'authorization': `bearer ${token}`,
       'apns-id': uuidv4(),
-      'apns-push-type': 'alert',
-      'apns-priority': '10',
+      'apns-push-type': 'background',
+      'apns-priority': '5',
       'apns-topic': APNS_BUNDLE_ID,
       'content-type': 'application/json',
       'content-length': Buffer.byteLength(postData)
