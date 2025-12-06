@@ -11,12 +11,12 @@
   "devDependencies": {
     "@types/aws-lambda": "^8.10.126",
     "@types/jest": "^30.0.0",
-    "@types/node": "^20.8.0",
+    "@types/node": "^24.0.0",
     "jest": "^30.2.0",
     "typescript": "^5.2.2"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
     "test": "jest",

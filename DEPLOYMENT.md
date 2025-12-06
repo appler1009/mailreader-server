@@ -56,7 +56,7 @@ The deployment creates these AWS resources:
 
 ### Lambda Function
 - **Function**: `gmail-push-{environment}-lambda`
-- **Runtime**: Node.js 20.x
+- **Runtime**: Node.js 24.x
 - **Memory**: 192 MB
 - **Timeout**: 30 seconds
 - **Role**: IAM role with DynamoDB, CloudWatch, and Secrets Manager access

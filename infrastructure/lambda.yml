@@ -79,7 +79,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Sub gmail-push-${Environment}-lambda
-      Runtime: nodejs20.x
+      Runtime: nodejs24.x
       Handler: index.handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 30
